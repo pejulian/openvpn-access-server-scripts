@@ -2,11 +2,11 @@ import chalk from 'chalk';
 import { spawnSync, SpawnSyncOptions } from 'child_process';
 import AWS from 'aws-sdk';
 import fs from 'fs';
-import { SetupSslOptions } from 'types';
+import { SetupOpenVpnOptions } from 'types';
 import { PromiseResult } from 'aws-sdk/lib/request';
 
-export class SetupSsl {
-    private readonly options: SetupSslOptions;
+export class SetupOpenVpn {
+    private readonly options: SetupOpenVpnOptions;
     private readonly s3Client: AWS.S3;
 
     private static SPAWN_SYNC_OPTIONS: SpawnSyncOptions = {
@@ -14,13 +14,143 @@ export class SetupSsl {
         shell: process.platform === 'win32'
     };
 
-    constructor(options: SetupSslOptions) {
+    constructor(options: SetupOpenVpnOptions) {
         this.options = options;
         this.s3Client = new AWS.S3({
             region: options.region
         });
 
+        this.setupOpenVpn();
         this.setupSsl();
+    }
+
+    public setupOpenVpn() {
+        const { userName, userPassword, ip } = this.options;
+
+        if (typeof ip !== 'undefined') {
+            console.log(chalk.green('Setting upstream dns settings'));
+
+            try {
+                spawnSync(
+                    'sudo',
+                    [
+                        `/usr/local/openvpn_as/scripts/sacli`,
+                        '--key',
+                        'vpn.client.routing.reroute_dns',
+                        `--value`,
+                        `custom`,
+                        `ConfigPut`
+                    ].filter((el) => el !== ''),
+                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
+                );
+
+                spawnSync(
+                    'sudo',
+                    [
+                        `/usr/local/openvpn_as/scripts/sacli`,
+                        '--key',
+                        'vpn.server.dhcp_option.dns.0',
+                        `--value`,
+                        `${ip}`,
+                        `ConfigPut`
+                    ].filter((el) => el !== ''),
+                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
+                );
+
+                spawnSync(
+                    'sudo',
+                    [
+                        `/usr/local/openvpn_as/scripts/sacli`,
+                        '--key',
+                        'vpn.server.routing.gateway_access',
+                        `--value`,
+                        `true`,
+                        `ConfigPut`
+                    ].filter((el) => el !== ''),
+                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
+                );
+            } catch (e) {
+                console.log(
+                    chalk.redBright(
+                        'An error occured while setting upstream dns settings'
+                    ),
+                    e
+                );
+                return;
+            }
+        }
+
+        try {
+            console.log(
+                chalk.green('Creating default client user for OpenVPN')
+            );
+
+            spawnSync(
+                'sudo',
+                [
+                    `/usr/local/openvpn_as/scripts/sacli`,
+                    '--key',
+                    'vpn.client.routing.reroute_gw',
+                    `--value`,
+                    `true`,
+                    `ConfigPut`
+                ].filter((el) => el !== ''),
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            );
+
+            spawnSync(
+                'sudo',
+                [
+                    `/usr/local/openvpn_as/scripts/sacli`,
+                    '--user',
+                    `${userName}`,
+                    `--key`,
+                    `type`,
+                    '--value',
+                    'user_connect',
+                    `UserPropPut`
+                ].filter((el) => el !== ''),
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            );
+
+            spawnSync(
+                'sudo',
+                [
+                    `/usr/local/openvpn_as/scripts/sacli`,
+                    '--user',
+                    `${userName}`,
+                    `--key`,
+                    `prop_autologin`,
+                    '--value',
+                    'true',
+                    `UserPropPut`
+                ].filter((el) => el !== ''),
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            );
+
+            spawnSync(
+                'sudo',
+                [
+                    `/usr/local/openvpn_as/scripts/sacli`,
+                    '--user',
+                    `${userName}`,
+                    `--new_pass`,
+                    `${userPassword}`,
+                    'SetLocalPassword'
+                ].filter((el) => el !== ''),
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            );
+
+            console.log(chalk.green('Updated OpenVPN config successfully!'));
+        } catch (e) {
+            console.log(
+                chalk.redBright(
+                    'An error occured while creating default client user'
+                ),
+                e
+            );
+            return;
+        }
     }
 
     public async setupSsl() {
@@ -33,8 +163,6 @@ export class SetupSsl {
         const { domainName, email, bucket } = this.options;
 
         this.installCertbot();
-
-        this.stopOpenVpn();
 
         const hasExistingCert = await this.hasExistingCert();
 
@@ -53,6 +181,8 @@ export class SetupSsl {
                         'certbot',
                         'certonly',
                         '--standalone',
+                        // '--server',
+                        // 'https://acme-staging-v02.api.letsencrypt.org/directory',
                         '--non-interactive',
                         '--agree-tos',
                         '--email',
@@ -60,7 +190,7 @@ export class SetupSsl {
                         '--domains',
                         domainName
                     ].filter((el) => el !== ''),
-                    SetupSsl.SPAWN_SYNC_OPTIONS
+                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
                 );
             } catch (e) {
                 console.log(
@@ -77,7 +207,7 @@ export class SetupSsl {
                     ['chmod', '-R', '755', '/etc/letsencrypt'].filter(
                         (el) => el !== ''
                     ),
-                    SetupSsl.SPAWN_SYNC_OPTIONS
+                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
                 );
             } catch (e) {
                 console.log(
@@ -173,7 +303,7 @@ export class SetupSsl {
                         '-p',
                         `/etc/letsencrypt/live/${domainName}`
                     ].filter((el) => el !== ''),
-                    SetupSsl.SPAWN_SYNC_OPTIONS
+                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
                 );
 
                 spawnSync(
@@ -181,7 +311,7 @@ export class SetupSsl {
                     ['chmod', '-R', '777', `/etc/letsencrypt`].filter(
                         (el) => el !== ''
                     ),
-                    SetupSsl.SPAWN_SYNC_OPTIONS
+                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
                 );
             } catch (e) {
                 console.log(
@@ -336,21 +466,21 @@ export class SetupSsl {
                     'install',
                     'software-properties-common'
                 ].filter((el) => el !== ''),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
 
             spawnSync(
                 'sudo',
-                ['add-apt-repository', '-y', 'ppa:certbot/certbot'].filter(
+                ['add-apt-repository', 'ppa:certbot/certbot', '-y'].filter(
                     (el) => el !== ''
                 ),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
 
             spawnSync(
                 'sudo',
                 ['apt-get', '-y', 'update'].filter((el) => el !== ''),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
 
             spawnSync(
@@ -358,7 +488,7 @@ export class SetupSsl {
                 ['apt-get', '-y', 'install', 'certbot'].filter(
                     (el) => el !== ''
                 ),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
         } catch (e) {
             console.log(
@@ -384,7 +514,7 @@ export class SetupSsl {
                     '-mk',
                     'cs.ca_bundle'
                 ].filter((el) => el !== ''),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
 
             spawnSync(
@@ -394,7 +524,7 @@ export class SetupSsl {
                     '-mk',
                     'cs.priv_key'
                 ].filter((el) => el !== ''),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
 
             spawnSync(
@@ -404,7 +534,7 @@ export class SetupSsl {
                     '-mk',
                     'cs.cert'
                 ].filter((el) => el !== ''),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
         } catch (e) {
             console.log(
@@ -430,7 +560,7 @@ export class SetupSsl {
                     `/etc/letsencrypt/live/${this.options.domainName}/cert.pem`,
                     `/usr/local/openvpn_as/etc/web-ssl/server.crt`
                 ].filter((el) => el !== ''),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
 
             spawnSync(
@@ -442,7 +572,7 @@ export class SetupSsl {
                     `/etc/letsencrypt/live/${this.options.domainName}/privkey.pem`,
                     `/usr/local/openvpn_as/etc/web-ssl/server.key`
                 ].filter((el) => el !== ''),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
 
             spawnSync(
@@ -454,7 +584,7 @@ export class SetupSsl {
                     `/etc/letsencrypt/live/${this.options.domainName}/chain.pem`,
                     `/usr/local/openvpn_as/etc/web-ssl/ca.crt`
                 ].filter((el) => el !== ''),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
         } catch (e) {
             console.log(
@@ -476,7 +606,7 @@ export class SetupSsl {
                 ['/usr/local/openvpn_as/scripts/sacli', 'stop'].filter(
                     (el) => el !== ''
                 ),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
         } catch (e) {
             console.log(
@@ -496,7 +626,7 @@ export class SetupSsl {
                 ['/usr/local/openvpn_as/scripts/sacli', 'start'].filter(
                     (el) => el !== ''
                 ),
-                SetupSsl.SPAWN_SYNC_OPTIONS
+                SetupOpenVpn.SPAWN_SYNC_OPTIONS
             );
         } catch (e) {
             console.log(
@@ -507,7 +637,6 @@ export class SetupSsl {
         }
     }
 }
-
 
 // sudo mkdir ~/.nvm
 // sudo mkdir ~/.npm

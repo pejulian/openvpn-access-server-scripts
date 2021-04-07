@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { SetupSslOptions } from 'types';
+import { SetupOpenVpnOptions } from 'types';
 import { version, name } from '../package.json';
-import { SetupSsl } from './openvpn-unattended-install';
+import { SetupOpenVpn } from './openvpn-unattended-install';
 
 const program = new Command();
 program.name(name).version(version);
@@ -10,6 +10,10 @@ program.name(name).version(version);
 program
     .command(`setup-openvpn`)
     .description('Sets up SSL for OpenVPN Access Server Web UI')
+    .option(
+        `-i, --ip [value]`,
+        `The private ip address of the pi hole ec2 instance (for setting up upstream dns)`
+    )
     .requiredOption(
         `-d, --domain-name [value]`,
         `The domain name to use to register the SSL certificate`
@@ -26,8 +30,22 @@ program
         `-r --region [value]`,
         `The AWS region to use when using the SDK to communicate with AWS`
     )
+    .requiredOption(
+        `-u, --user-name [value]`,
+        `The username of the client user`
+    )
+    .requiredOption(
+        `-p, --user-password [value]`,
+        `The password of the client user`
+    )
     .action((...args: unknown[]) => {
-        new SetupSsl(args[0] as SetupSslOptions); // Use first index in args array for options because there's no argument defined
+        new SetupOpenVpn(args[0] as SetupOpenVpnOptions); // Use first index in args array for options because there's no argument defined
     });
+
+program
+    .command(`setup-pihole`)
+    .description(
+        `Sets up unbound as a recursive DNS provider and sets up unbound to use it`
+    );
 
 program.parse(process.argv);

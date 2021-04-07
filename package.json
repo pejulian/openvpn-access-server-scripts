@@ -1,6 +1,6 @@
 {
     "name": "openvpn-access-server-scripts",
-    "version": "0.0.1-beta.3",
+    "version": "0.0.1-beta.6",
     "description": "npm module containing scripts that are used to run further setup steps on the OpenVPN and PiHole EC2 instances created in the openvpn-access-server-infra CDK project",
     "main": "./dist/src/index.js",
     "bin": {
