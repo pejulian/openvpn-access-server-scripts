@@ -637,13 +637,3 @@ export class SetupOpenVpn {
         }
     }
 }
-
-// sudo mkdir ~/.nvm
-// sudo mkdir ~/.npm
-// sudo chmod -R 777 ~/.nvm
-// sudo chmod -R 777 ~/.npm
-// curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.32.0/install.sh | bash
-// . ~/.nvm/nvm.sh
-// nvm install 14
-// node -e "console.log('Running Node.js ' + process.version)"
-// npx openvpn-access-server-scripts@0.0.1-beta.3 setup-openvpn -d ap-southeast-1.vpn.julian-pereira.com -e bleushade@gmail.com -b openvpnaccessserverinfra-openvpnaccessserverinfra-pgtakn64zlql -r ap-southeast-1
