@@ -7,3 +7,8 @@ export type SetupOpenVpnOptions = {
     readonly userName: string;
     readonly userPassword: string
 };
+
+export type SetupPiHoleOptions = {
+    readonly password: string;
+    readonly region: string;
+}

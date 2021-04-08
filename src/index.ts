@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { SetupOpenVpnOptions } from 'types';
+import { SetupOpenVpnOptions, SetupPiHoleOptions } from 'types';
 import { version, name } from '../package.json';
 import { SetupOpenVpn } from './openvpn-unattended-install';
+import { SetupPiHole } from './pihole-unattended-install.js';
 
 const program = new Command();
 program.name(name).version(version);
@@ -46,6 +47,17 @@ program
     .command(`setup-pihole`)
     .description(
         `Sets up unbound as a recursive DNS provider and sets up unbound to use it`
-    );
+    )
+    .requiredOption(
+        `-r --region [value]`,
+        `The AWS region to use when using the SDK to communicate with AWS`
+    )
+    .requiredOption(
+        `-p, --password [value]`,
+        `The password to login to the web interface`
+    )
+    .action((...args: unknown[]) => {
+        new SetupPiHole(args[0] as SetupPiHoleOptions); // Use first index in args array for options because there's no argument defined
+    });
 
 program.parse(process.argv);
