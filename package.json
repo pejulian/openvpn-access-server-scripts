@@ -1,6 +1,6 @@
 {
     "name": "openvpn-access-server-scripts",
-    "version": "0.0.1-beta.7",
+    "version": "0.0.1-beta.61",
     "description": "npm module containing scripts that are used to run further setup steps on the OpenVPN and PiHole EC2 instances created in the openvpn-access-server-infra CDK project",
     "main": "./dist/src/index.js",
     "bin": {
@@ -13,7 +13,7 @@
         "prettier:format": "prettier --write ./src/**/*.ts",
         "prepare": "npm run build",
         "publish:beta": "npm run update-beta-version && npm publish --tag beta",
-        "publish:latest": "npm run update-version npm publish --tag beta",
+        "publish:latest": "npm run update-version npm publish --tag latest",
         "update-beta-version": "node ./scripts/npm-update-beta-version.js",
         "update-version": "node ./scripts/npm-update-version.js"
     },
@@ -32,16 +32,16 @@
         "aws-sdk": "^2.881.0",
         "chalk": "^4.1.0",
         "commander": "^7.2.0",
-        "json-find": "^2.0.8",
         "lodash": "^4.17.21",
-        "uuid": "^8.3.2",
-        "yamljs": "^0.3.0"
+        "shelljs": "^0.8.4",
+        "uuid": "^8.3.2"
     },
     "devDependencies": {
         "@types/chalk": "^2.2.0",
         "@types/commander": "^2.12.2",
         "@types/node": "^14.14.37",
         "@types/rimraf": "^3.0.0",
+        "@types/shelljs": "^0.8.8",
         "child-process-promise": "^2.2.1",
         "cpx": "^1.5.0",
         "jest": "^26.6.3",

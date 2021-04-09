@@ -1,18 +1,14 @@
 import chalk from 'chalk';
-import { spawnSync, SpawnSyncOptions } from 'child_process';
 import AWS from 'aws-sdk';
 import fs from 'fs';
 import { SetupOpenVpnOptions } from 'types';
 import { PromiseResult } from 'aws-sdk/lib/request';
+import packageJson from '../package.json';
+import shelljs from 'shelljs';
 
 export class SetupOpenVpn {
     private readonly options: SetupOpenVpnOptions;
     private readonly s3Client: AWS.S3;
-
-    private static SPAWN_SYNC_OPTIONS: SpawnSyncOptions = {
-        stdio: 'inherit',
-        shell: process.platform === 'win32'
-    };
 
     constructor(options: SetupOpenVpnOptions) {
         this.options = options;
@@ -20,142 +16,88 @@ export class SetupOpenVpn {
             region: options.region
         });
 
-        this.setupOpenVpn();
-        this.setupSsl();
+        this.runSetup();
     }
 
-    public setupOpenVpn() {
-        const { userName, userPassword, ip } = this.options;
-
-        if (typeof ip !== 'undefined') {
-            console.log(chalk.green('Setting upstream dns settings'));
-
-            try {
-                spawnSync(
-                    'sudo',
-                    [
-                        `/usr/local/openvpn_as/scripts/sacli`,
-                        '--key',
-                        'vpn.client.routing.reroute_dns',
-                        `--value`,
-                        `custom`,
-                        `ConfigPut`
-                    ].filter((el) => el !== ''),
-                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
-                );
-
-                spawnSync(
-                    'sudo',
-                    [
-                        `/usr/local/openvpn_as/scripts/sacli`,
-                        '--key',
-                        'vpn.server.dhcp_option.dns.0',
-                        `--value`,
-                        `${ip}`,
-                        `ConfigPut`
-                    ].filter((el) => el !== ''),
-                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
-                );
-
-                spawnSync(
-                    'sudo',
-                    [
-                        `/usr/local/openvpn_as/scripts/sacli`,
-                        '--key',
-                        'vpn.server.routing.gateway_access',
-                        `--value`,
-                        `true`,
-                        `ConfigPut`
-                    ].filter((el) => el !== ''),
-                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
-                );
-            } catch (e) {
-                console.log(
-                    chalk.redBright(
-                        'An error occured while setting upstream dns settings'
-                    ),
-                    e
-                );
-                return;
-            }
-        }
-
+    public runSetup(): void {
         try {
             console.log(
-                chalk.green('Creating default client user for OpenVPN')
+                chalk.bgGreenBright(
+                    `Running openvpn unattended setup ${packageJson.version}`
+                )
             );
-
-            spawnSync(
-                'sudo',
-                [
-                    `/usr/local/openvpn_as/scripts/sacli`,
-                    '--key',
-                    'vpn.client.routing.reroute_gw',
-                    `--value`,
-                    `true`,
-                    `ConfigPut`
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
-
-            spawnSync(
-                'sudo',
-                [
-                    `/usr/local/openvpn_as/scripts/sacli`,
-                    '--user',
-                    `${userName}`,
-                    `--key`,
-                    `type`,
-                    '--value',
-                    'user_connect',
-                    `UserPropPut`
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
-
-            spawnSync(
-                'sudo',
-                [
-                    `/usr/local/openvpn_as/scripts/sacli`,
-                    '--user',
-                    `${userName}`,
-                    `--key`,
-                    `prop_autologin`,
-                    '--value',
-                    'true',
-                    `UserPropPut`
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
-
-            spawnSync(
-                'sudo',
-                [
-                    `/usr/local/openvpn_as/scripts/sacli`,
-                    '--user',
-                    `${userName}`,
-                    `--new_pass`,
-                    `${userPassword}`,
-                    'SetLocalPassword'
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
-
-            console.log(chalk.green('Updated OpenVPN config successfully!'));
+            this.setupOpenVpn();
+            this.setupSsl();
         } catch (e) {
             console.log(
-                chalk.redBright(
-                    'An error occured while creating default client user'
-                ),
+                chalk.bgRedBright(`Something failed during openvpn setup`),
                 e
             );
             return;
         }
     }
 
-    public async setupSsl() {
+    private setupOpenVpn() {
+        const { userName, userPassword, ip } = this.options;
+
+        if (typeof ip !== 'undefined') {
+            console.log(chalk.bgGreenBright('Setting upstream dns settings'));
+
+            try {
+                shelljs.exec(
+                    `sudo /usr/local/openvpn_as/scripts/sacli --key vpn.client.routing.reroute_dns --value custom ConfigPut`
+                );
+                shelljs.exec(
+                    `sudo /usr/local/openvpn_as/scripts/sacli --key vpn.server.dhcp_option.dns.0 --value ${ip} ConfigPut`
+                );
+                shelljs.exec(
+                    `sudo /usr/local/openvpn_as/scripts/sacli --key vpn.server.routing.gateway_access --value true ConfigPut`
+                );
+            } catch (e) {
+                console.log(
+                    chalk.bgRedBright(
+                        'An error occured while setting upstream dns settings'
+                    ),
+                    e
+                );
+                throw e;
+            }
+        }
+
+        try {
+            console.log(
+                chalk.bgGreenBright('Creating default client user for OpenVPN')
+            );
+
+            shelljs.exec(
+                `sudo /usr/local/openvpn_as/scripts/sacli --key vpn.client.routing.reroute_gw --value true ConfigPut`
+            );
+
+            shelljs.exec(
+                `sudo /usr/local/openvpn_as/scripts/sacli --user ${userName} --key type --value user_connect UserPropPut`
+            );
+
+            shelljs.exec(
+                `sudo /usr/local/openvpn_as/scripts/sacli --user ${userName} --key prop_autologin --value true UserPropPut`
+            );
+
+            shelljs.exec(
+                `sudo /usr/local/openvpn_as/scripts/sacli --user ${userName} --key new_pass --value ${userPassword} SetLocalPassword`
+            );
+        } catch (e) {
+            console.log(
+                chalk.bgRedBright(
+                    'An error occured while creating default client user'
+                ),
+                e
+            );
+            throw e;
+        }
+    }
+
+    private async setupSsl() {
         console.log(
-            chalk.green(
+            chalk.bgGreenBright(
                 `Starting process to append an SSL certificate to OpenVPN Access Server Web UI`
             )
         );
@@ -175,9 +117,9 @@ export class SetupOpenVpn {
 
             // Run certbot
             try {
-                spawnSync(
-                    'sudo',
+                shelljs.exec(
                     [
+                        'sudo',
                         'certbot',
                         'certonly',
                         '--standalone',
@@ -189,34 +131,29 @@ export class SetupOpenVpn {
                         email,
                         '--domains',
                         domainName
-                    ].filter((el) => el !== ''),
-                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
+                    ].join(' ')
                 );
             } catch (e) {
                 console.log(
-                    chalk.redBright('An error occured while generating a cert'),
+                    chalk.bgRedBright(
+                        'An error occured while generating a cert'
+                    ),
                     e
                 );
-                return;
+                throw e;
             }
 
             // Change letsencrypt directory permissions
             try {
-                spawnSync(
-                    'sudo',
-                    ['chmod', '-R', '755', '/etc/letsencrypt'].filter(
-                        (el) => el !== ''
-                    ),
-                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
-                );
+                shelljs.exec(`sudo chmod -R 755 /etc/letsencrypt`);
             } catch (e) {
                 console.log(
-                    chalk.redBright(
+                    chalk.bgRedBright(
                         'An error while chaging directory permissions'
                     ),
                     e
                 );
-                return;
+                throw e;
             }
 
             // Read generated certs and put them into s3
@@ -282,45 +219,40 @@ export class SetupOpenVpn {
                     .promise();
             } catch (e) {
                 console.log(
-                    chalk.redBright(
+                    chalk.bgRedBright(
                         `An error occured when copying certs to S3 bucket ${bucket}`
                     ),
                     e
                 );
-                return;
+                throw e;
             }
         } else {
             console.log(
-                chalk.greenBright(`Existing cert found, reusing it...`)
+                chalk.bgGreenBright(`Existing cert found, reusing it...`)
             );
 
             // Make relevant directories
             try {
-                spawnSync(
-                    'sudo',
+                shelljs.exec(
                     [
+                        'sudo',
                         'mkdir',
                         '-p',
                         `/etc/letsencrypt/live/${domainName}`
-                    ].filter((el) => el !== ''),
-                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
+                    ].join(' ')
                 );
 
-                spawnSync(
-                    'sudo',
-                    ['chmod', '-R', '777', `/etc/letsencrypt`].filter(
-                        (el) => el !== ''
-                    ),
-                    SetupOpenVpn.SPAWN_SYNC_OPTIONS
+                shelljs.exec(
+                    ['sudo', 'chmod', '-R', '777', `/etc/letsencrypt`].join(' ')
                 );
             } catch (e) {
                 console.log(
-                    chalk.redBright(
+                    chalk.bgRedBright(
                         `An error occured while creating relevant directories to store certificate`
                     ),
                     e
                 );
-                return;
+                throw e;
             }
 
             // Get objects from s3 and write to relevant directory
@@ -358,17 +290,16 @@ export class SetupOpenVpn {
                 );
             } catch (e) {
                 console.log(
-                    chalk.redBright(
+                    chalk.bgRedBright(
                         `An error occured while getting certificate artifacts from ${bucket}`
                     ),
                     e
                 );
-                return;
+                throw e;
             }
         }
 
         this.applyCert();
-
         this.startOpenVpn();
     }
 
@@ -387,7 +318,9 @@ export class SetupOpenVpn {
 
             return response.Body?.toString('utf-8');
         } catch (e) {
-            console.log(chalk.redBright(`Failed to get ${Key} from ${Bucket}`));
+            console.log(
+                chalk.bgRedBright(`Failed to get ${Key} from ${Bucket}`)
+            );
             throw e;
         }
     }
@@ -396,7 +329,7 @@ export class SetupOpenVpn {
         try {
             fs.writeFileSync(path, content);
         } catch (e) {
-            console.log(chalk.redBright(`Failed to write ${path}`));
+            console.log(chalk.bgRedBright(`Failed to write ${path}`));
             throw e;
         }
     }
@@ -456,161 +389,79 @@ export class SetupOpenVpn {
      */
     private installCertbot() {
         try {
-            console.log(chalk.blueBright(`Installing certbot`));
-
-            spawnSync(
-                'sudo',
-                [
-                    'apt-get',
-                    '-y',
-                    'install',
-                    'software-properties-common'
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
-
-            spawnSync(
-                'sudo',
-                ['add-apt-repository', 'ppa:certbot/certbot', '-y'].filter(
-                    (el) => el !== ''
-                ),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
-
-            spawnSync(
-                'sudo',
-                ['apt-get', '-y', 'update'].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
-
-            spawnSync(
-                'sudo',
-                ['apt-get', '-y', 'install', 'certbot'].filter(
-                    (el) => el !== ''
-                ),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
+            console.log(chalk.bgGreenBright(`Installing certbot`));
+            shelljs.exec(`sudo apt-get -y install software-properties-common`);
+            shelljs.exec(`sudo add-apt-repository ppa:certbot/certbot -y`);
+            shelljs.exec(`sudo apt-get -y update`);
+            shelljs.exec(`sudo apt-get -y install certbot`);
         } catch (e) {
             console.log(
-                chalk.redBright('An error occured while installing certbot'),
+                chalk.bgRedBright('An error occured while installing certbot'),
                 e
             );
-            return;
+            throw e;
         }
     }
 
     private applyCert() {
         try {
             console.log(
-                chalk.blueBright(
+                chalk.bgGreenBright(
                     `Delete existing cert references in OpenVPN DB`
                 )
             );
 
-            spawnSync(
-                'sudo',
-                [
-                    '/usr/local/openvpn_as/scripts/confdba',
-                    '-mk',
-                    'cs.ca_bundle'
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            shelljs.exec(
+                `sudo /usr/local/openvpn_as/scripts/confdba -mk cs.ca_bundle`
             );
-
-            spawnSync(
-                'sudo',
-                [
-                    '/usr/local/openvpn_as/scripts/confdba',
-                    '-mk',
-                    'cs.priv_key'
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            shelljs.exec(
+                `sudo /usr/local/openvpn_as/scripts/confdba -mk cs.priv_key`
             );
-
-            spawnSync(
-                'sudo',
-                [
-                    '/usr/local/openvpn_as/scripts/confdba',
-                    '-mk',
-                    'cs.cert'
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            shelljs.exec(
+                `sudo /usr/local/openvpn_as/scripts/confdba -mk cs.cert`
             );
         } catch (e) {
             console.log(
-                chalk.redBright(
+                chalk.bgRedBright(
                     'An error occured while deleting certificate references in OpenVPN DB'
                 ),
                 e
             );
-            return;
+            throw e;
         }
 
         try {
             console.log(
-                chalk.blueBright(`Apply symbolic links to SSL certificates`)
+                chalk.bgGreenBright(`Apply symbolic links to SSL certificates`)
             );
 
-            spawnSync(
-                'sudo',
-                [
-                    'ln',
-                    '-s',
-                    '-f',
-                    `/etc/letsencrypt/live/${this.options.domainName}/cert.pem`,
-                    `/usr/local/openvpn_as/etc/web-ssl/server.crt`
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            shelljs.exec(
+                `sudo ln -s -f /etc/letsencrypt/live/${this.options.domainName}/cert.pem /usr/local/openvpn_as/etc/web-ssl/server.crt`
             );
-
-            spawnSync(
-                'sudo',
-                [
-                    'ln',
-                    '-s',
-                    '-f',
-                    `/etc/letsencrypt/live/${this.options.domainName}/privkey.pem`,
-                    `/usr/local/openvpn_as/etc/web-ssl/server.key`
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            shelljs.exec(
+                `sudo ln -s -f /etc/letsencrypt/live/${this.options.domainName}/privkey.pem /usr/local/openvpn_as/etc/web-ssl/server.key`
             );
-
-            spawnSync(
-                'sudo',
-                [
-                    'ln',
-                    '-s',
-                    '-f',
-                    `/etc/letsencrypt/live/${this.options.domainName}/chain.pem`,
-                    `/usr/local/openvpn_as/etc/web-ssl/ca.crt`
-                ].filter((el) => el !== ''),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
+            shelljs.exec(
+                `sudo ln -s -f /etc/letsencrypt/live/${this.options.domainName}/chain.pem /usr/local/openvpn_as/etc/web-ssl/ca.crt`
             );
         } catch (e) {
             console.log(
-                chalk.redBright(
+                chalk.bgRedBright(
                     'An error occured symlinking to certificate files'
                 ),
                 e
             );
-            return;
+            throw e;
         }
     }
 
     private stopOpenVpn() {
         try {
-            console.log(chalk.blueBright(`Stopping openvpn`));
-
-            spawnSync(
-                'sudo',
-                ['/usr/local/openvpn_as/scripts/sacli', 'stop'].filter(
-                    (el) => el !== ''
-                ),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
+            console.log(chalk.bgGreenBright(`Stopping openvpn`));
+            shelljs.exec(`sudo /usr/local/openvpn_as/scripts/sacli stop`);
         } catch (e) {
             console.log(
-                chalk.redBright('An error occured while stopping openvpn'),
+                chalk.bgRedBright('An error occured while stopping openvpn'),
                 e
             );
             return;
@@ -620,17 +471,10 @@ export class SetupOpenVpn {
     private startOpenVpn() {
         try {
             console.log(chalk.blueBright(`Starting openvpn`));
-
-            spawnSync(
-                'sudo',
-                ['/usr/local/openvpn_as/scripts/sacli', 'start'].filter(
-                    (el) => el !== ''
-                ),
-                SetupOpenVpn.SPAWN_SYNC_OPTIONS
-            );
+            shelljs.exec(`sudo /usr/local/openvpn_as/scripts/sacli start`);
         } catch (e) {
             console.log(
-                chalk.redBright('An error occured while starting openvpn'),
+                chalk.bgRedBright('An error occured while starting openvpn'),
                 e
             );
             return;

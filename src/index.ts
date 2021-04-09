@@ -37,7 +37,7 @@ program
     )
     .requiredOption(
         `-p, --user-password [value]`,
-        `The password of the client user`
+        `The password of the client user (special characters need to be escaped before they are passed here)`
     )
     .action((...args: unknown[]) => {
         new SetupOpenVpn(args[0] as SetupOpenVpnOptions); // Use first index in args array for options because there's no argument defined
@@ -54,7 +54,7 @@ program
     )
     .requiredOption(
         `-p, --password [value]`,
-        `The password to login to the web interface`
+        `The password to login to the web interface (special characters need to be escaped before they are passed here)`
     )
     .action((...args: unknown[]) => {
         new SetupPiHole(args[0] as SetupPiHoleOptions); // Use first index in args array for options because there's no argument defined
