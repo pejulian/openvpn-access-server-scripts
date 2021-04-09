@@ -39,6 +39,11 @@ program
         `-p, --user-password [value]`,
         `The password of the client user (special characters need to be escaped before they are passed here)`
     )
+    .option(
+        `-c, --cert-environment [value]`,
+        `Which environment should be used when requesting SSL cert from Lets Encrypt (staging, production)`,
+        'production'
+    )
     .action((...args: unknown[]) => {
         new SetupOpenVpn(args[0] as SetupOpenVpnOptions); // Use first index in args array for options because there's no argument defined
     });

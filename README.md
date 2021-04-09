@@ -27,16 +27,16 @@ This function:
 
 After requesting a new certificate, this function will store the generated certificate in an S3 bucket for reuse. This is because there's a rate limit of 5 certificates for the same domain name per week. If a certificate already exists, this function will get those artifacts and reuse them when assigning the certificate to OpenVPN Access Server. 
 
-| Option             | Required           | Description                                                                                         |
-| ------------------ | ------------------ | --------------------------------------------------------------------------------------------------- |
-| -i --ip            | :x:                | The private ip address of the upstream dns ec2 instance                                             |
-| -d --domain-name   | :heavy_check_mark: | The FQDN to be used for certificate registration                                                    |
-| -e --email         | :heavy_check_mark: | The email to use for certificate registration                                                       |
-| -b --bucket        | :heavy_check_mark: | The S3 Bucket to store/obtain certificate artifacts                                                 |
-| -r --region        | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                         |
-| -u --user-name     | :heavy_check_mark: | The default vpn client username                                                                     |
-| -p --user-password | :heavy_check_mark: | The default vpn client password (special characters need to be escaped before they are passed here) |
-
+| Option                | Required           | Description                                                                                         |
+| --------------------- | ------------------ | --------------------------------------------------------------------------------------------------- |
+| -i --ip               | :x:                | The private ip address of the upstream dns ec2 instance                                             |
+| -d --domain-name      | :heavy_check_mark: | The FQDN to be used for certificate registration                                                    |
+| -e --email            | :heavy_check_mark: | The email to use for certificate registration                                                       |
+| -b --bucket           | :heavy_check_mark: | The S3 Bucket to store/obtain certificate artifacts                                                 |
+| -r --region           | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                         |
+| -u --user-name        | :heavy_check_mark: | The default vpn client username                                                                     |
+| -p --user-password    | :heavy_check_mark: | The default vpn client password (special characters need to be escaped before they are passed here) |
+| -c --cert-environment | :heavy_check_mark: | Which environment should be used when requesting SSL cert from Lets Encrypt (staging, production)   |
 ### `setup-pihole`
 
 Installs Pi Hole as a DNS server for Ad Blocking and sets up Unbound to serve as a recursive DNS service.

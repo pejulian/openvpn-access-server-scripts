@@ -6,6 +6,7 @@ export type SetupOpenVpnOptions = {
     readonly region: string;
     readonly userName: string;
     readonly userPassword: string
+    readonly certEnvironment?: 'production' | 'staging';
 };
 
 export type SetupPiHoleOptions = {
