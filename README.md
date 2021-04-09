@@ -7,7 +7,7 @@ A node module that holds a collection of scripts that will be used by EC2 instan
 Example to run the OpenVPN script:
 
 ```bash
-npx openvpn-access-server-scripts setup-openvpn -i 1.0.0.1 -d domain.foo-bar.com -e foo@bar.com -b foo-bar-bucket -r ap-southeast-1 -u user -p 123@abc
+npx openvpn-access-server-scripts setup-openvpn -i 1.0.0.1 -d domain.foo-bar.com -e foo@bar.com -b foo-bar-bucket -r ap-southeast-1 -u user -p 123@abc -c staging
 ```
 
 Example to run the PiHole script:
