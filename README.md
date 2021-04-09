@@ -2,6 +2,8 @@
 
 A node module that holds a collection of scripts that will be used by EC2 instances spawned in the [openvpn-access-server-infra](https://github.com/pejulian/openvpn-access-server-infra) infrastructure deployment to complete the setup of OpenVPN Access Server and PiHole.
 
+> Scripts in this module are not standalone. They are built specifically to run based on infrastructure that has been set up in `openvpn-access-server-infra`. Usage of these scripts beyond that context may not have desired results.
+
 ## Usage
 
 Example to run the OpenVPN script:
@@ -36,11 +38,11 @@ After requesting a new certificate, this function will store the generated certi
 | -r --region           | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                         |
 | -u --user-name        | :heavy_check_mark: | The default vpn client username                                                                     |
 | -p --user-password    | :heavy_check_mark: | The default vpn client password (special characters need to be escaped before they are passed here) |
-| -c --cert-environment | :heavy_check_mark: | Which environment should be used when requesting SSL cert from Lets Encrypt (staging, production)   |
+| -c --cert-environment | :x:                | Which environment should be used when requesting SSL cert from Lets Encrypt (staging, production)   |
 ### `setup-pihole`
 
 Installs Pi Hole as a DNS server for Ad Blocking and sets up Unbound to serve as a recursive DNS service.
-Also install some additional tooling to enhance Pi Hole functionality.
+Also installs some additional tooling to enhance Pi Hole functionality.
 
  | Option        | Required           | Description                                                                                            |
  | ------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
