@@ -82,7 +82,7 @@ export class SetupOpenVpn {
             );
 
             shelljs.exec(
-                `sudo /usr/local/openvpn_as/scripts/sacli --user ${userName} --key new_pass --value ${userPassword} SetLocalPassword`
+                `sudo /usr/local/openvpn_as/scripts/sacli --user ${userName}  --new_pass "${userPassword}" SetLocalPassword`
             );
         } catch (e) {
             console.log(
