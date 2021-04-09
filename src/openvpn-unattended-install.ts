@@ -123,8 +123,8 @@ export class SetupOpenVpn {
                         'certbot',
                         'certonly',
                         '--standalone',
-                        '--server', // Specify the staging server for development purposes
-                        'https://acme-staging-v02.api.letsencrypt.org/directory',
+                        // '--server', // Specify the staging server for development purposes
+                        // 'https://acme-staging-v02.api.letsencrypt.org/directory',
                         '--non-interactive',
                         '--agree-tos',
                         '--email',
