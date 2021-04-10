@@ -15,6 +15,7 @@ export class SetupOpenVpn {
         this.s3Client = new AWS.S3({
             region: options.region
         });
+        console.log('options', options);
 
         this.runSetup();
     }
@@ -82,7 +83,7 @@ export class SetupOpenVpn {
             );
 
             shelljs.exec(
-                `sudo /usr/local/openvpn_as/scripts/sacli --user ${userName}  --new_pass "${userPassword}" SetLocalPassword`
+                `sudo /usr/local/openvpn_as/scripts/sacli --user ${userName}  --new_pass ${userPassword} SetLocalPassword`
             );
         } catch (e) {
             console.log(

@@ -200,9 +200,7 @@ API_PRIVACY_MODE=false
 
         try {
             console.log(chalk.bgGreenBright(`Update pihole admin password`));
-            shelljs.exec(
-                `pihole -a -p "${this.escapeRegExp(this.options.password)}"`
-            );
+            shelljs.exec(`pihole -a -p ${this.options.password}`);
         } catch (e) {
             console.log(
                 chalk.bgRedBright(`Failed to update pihole admin password`),
@@ -460,12 +458,6 @@ private-address: fe80::/10
             );
             throw e;
         }
-    }
-
-    private escapeRegExp(input: unknown): string {
-        const source =
-            typeof input === 'string' || input instanceof String ? input : '';
-        return source.replace(/[-[/\]{}()*+?.,\\^$|#\s]/g, '\\$&');
     }
 
     get instanceId(): string | undefined {

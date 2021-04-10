@@ -37,7 +37,7 @@ After requesting a new certificate, this function will store the generated certi
 | -b --bucket           | :heavy_check_mark: | The S3 Bucket to store/obtain certificate artifacts                                                 |
 | -r --region           | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                         |
 | -u --user-name        | :heavy_check_mark: | The default vpn client username                                                                     |
-| -p --user-password    | :heavy_check_mark: | The default vpn client password (special characters need to be escaped before they are passed here) |
+| -p --user-password    | :heavy_check_mark: | The default vpn client password (special characters need to be handled before they are passed here) |
 | -c --cert-environment | :x:                | Which environment should be used when requesting SSL cert from Lets Encrypt (staging, production)   |
 ### `setup-pihole`
 
@@ -47,7 +47,7 @@ Also installs some additional tooling to enhance Pi Hole functionality.
  | Option        | Required           | Description                                                                                            |
  | ------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
  | -r --region   | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                            |
- | -p --password | :heavy_check_mark: | The pi hole web interface password (special characters need to be escaped before they are passed here) |
+ | -p --password | :heavy_check_mark: | The pi hole web interface password (special characters need to be handled before they are passed here) |
 
 ## Publishing
 
