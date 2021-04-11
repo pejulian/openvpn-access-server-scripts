@@ -21,6 +21,10 @@ program
         'production'
     )
     .requiredOption(
+        `-h --elastic-ip [value]`,
+        `The elastic ip address to be used as the host name`
+    )
+    .requiredOption(
         `-d, --domain-name [value]`,
         `The domain name to use to register the SSL certificate`
     )

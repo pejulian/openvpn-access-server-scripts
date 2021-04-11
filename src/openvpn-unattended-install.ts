@@ -39,10 +39,10 @@ export class SetupOpenVpn {
     }
 
     private setupOpenVpn() {
-        const { userName, userPassword, ip } = this.options;
+        const { userName, userPassword, ip, elasticIp } = this.options;
 
         if (typeof ip !== 'undefined') {
-            console.log(chalk.bgGreenBright('Setting upstream dns settings'));
+            console.log(chalk.bgGreenBright('Setting upstream dns settings and access server hostname'));
 
             try {
                 shelljs.exec(
@@ -53,6 +53,9 @@ export class SetupOpenVpn {
                 );
                 shelljs.exec(
                     `sudo /usr/local/openvpn_as/scripts/sacli --key vpn.server.routing.gateway_access --value true ConfigPut`
+                );
+                shelljs.exec(
+                    `sudo /usr/local/openvpn_as/scripts/sacli --key host.name --value ${elasticIp} ConfigPut`
                 );
             } catch (e) {
                 console.log(

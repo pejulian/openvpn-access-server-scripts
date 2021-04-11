@@ -1,5 +1,6 @@
 export type SetupOpenVpnOptions = {
     readonly ip?: string;
+    readonly elasticIp: string;
     readonly domainName: string;
     readonly email: string;
     readonly bucket: string;
