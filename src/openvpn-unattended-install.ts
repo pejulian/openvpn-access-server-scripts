@@ -42,7 +42,11 @@ export class SetupOpenVpn {
         const { userName, userPassword, ip, elasticIp } = this.options;
 
         if (typeof ip !== 'undefined') {
-            console.log(chalk.bgGreenBright('Setting upstream dns settings and access server hostname'));
+            console.log(
+                chalk.bgGreenBright(
+                    'Setting upstream dns settings and access server hostname'
+                )
+            );
 
             try {
                 shelljs.exec(
