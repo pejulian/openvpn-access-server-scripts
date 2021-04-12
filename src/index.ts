@@ -21,8 +21,8 @@ program
         'production'
     )
     .requiredOption(
-        `-h --elastic-ip [value]`,
-        `The elastic ip address to be used as the host name`
+        `-h --host-name [value]`,
+        `The FQDN (or private ip, though not recommended) to be used as the host name of the OpenVPN Access Server`
     )
     .requiredOption(
         `-d, --domain-name [value]`,
