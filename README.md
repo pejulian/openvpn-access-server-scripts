@@ -12,6 +12,8 @@ Example to run the OpenVPN script:
 npx openvpn-access-server-scripts setup-openvpn -i 1.0.0.1 -h my.vpn.foo-bar.com -d my.vpn.foo-bar.com -e foo@bar.com -b foo-bar-bucket -r ap-southeast-1 -u user -p 123@abc -c staging
 ```
 
+1. `-i`: An optional option to specify an upstream DNS server (in this context, the server that Pi Hole is running on) so that OpenVPN will forward traffic to this upstream DNS for further processing
+
 Example to run the PiHole script:
 
 ```bash
