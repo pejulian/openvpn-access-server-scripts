@@ -1,6 +1,9 @@
 export type SetupOpenVpnOptions = {
     readonly ip?: string;
-    readonly elasticIp: string;
+    /**
+     * FQDN to use as OpenVPN Access Server Host Name
+     */
+    readonly hostName: string;
     readonly domainName: string;
     readonly email: string;
     readonly bucket: string;

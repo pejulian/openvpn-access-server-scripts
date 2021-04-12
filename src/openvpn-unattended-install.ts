@@ -39,7 +39,7 @@ export class SetupOpenVpn {
     }
 
     private setupOpenVpn() {
-        const { userName, userPassword, ip, elasticIp } = this.options;
+        const { userName, userPassword, ip, hostName } = this.options;
 
         if (typeof ip !== 'undefined') {
             console.log(
@@ -59,7 +59,7 @@ export class SetupOpenVpn {
                     `sudo /usr/local/openvpn_as/scripts/sacli --key vpn.server.routing.gateway_access --value true ConfigPut`
                 );
                 shelljs.exec(
-                    `sudo /usr/local/openvpn_as/scripts/sacli --key host.name --value ${elasticIp} ConfigPut`
+                    `sudo /usr/local/openvpn_as/scripts/sacli --key host.name --value ${hostName} ConfigPut`
                 );
             } catch (e) {
                 console.log(

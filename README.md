@@ -9,7 +9,7 @@ A node module that holds a collection of scripts that will be used by EC2 instan
 Example to run the OpenVPN script:
 
 ```bash
-npx openvpn-access-server-scripts setup-openvpn -i 1.0.0.1 -h 53.1.1.233 -d domain.foo-bar.com -e foo@bar.com -b foo-bar-bucket -r ap-southeast-1 -u user -p 123@abc -c staging
+npx openvpn-access-server-scripts setup-openvpn -i 1.0.0.1 -h my.vpn.foo-bar.com -d my.vpn.foo-bar.com -e foo@bar.com -b foo-bar-bucket -r ap-southeast-1 -u user -p 123@abc -c staging
 ```
 
 Example to run the PiHole script:
@@ -29,17 +29,17 @@ This function:
 
 After requesting a new certificate, this function will store the generated certificate in an S3 bucket for reuse. This is because there's a rate limit of 5 certificates for the same domain name per week. If a certificate already exists, this function will get those artifacts and reuse them when assigning the certificate to OpenVPN Access Server. 
 
-| Option                | Required           | Description                                                                                                 |
-| --------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| -i --ip               | :x:                | The private ip address of the upstream dns ec2 instance                                                     |
-| -h --elastic-ip       | :heavy_check_mark: | The elastic ip (public) address that will be the host of this VPN Access Server that vpn clients connect to |
-| -d --domain-name      | :heavy_check_mark: | The FQDN to be used for certificate registration                                                            |
-| -e --email            | :heavy_check_mark: | The email to use for certificate registration                                                               |
-| -b --bucket           | :heavy_check_mark: | The S3 Bucket to store/obtain certificate artifacts                                                         |
-| -r --region           | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                                 |
-| -u --user-name        | :heavy_check_mark: | The default vpn client username                                                                             |
-| -p --user-password    | :heavy_check_mark: | The default vpn client password (special characters need to be handled before they are passed here)         |
-| -c --cert-environment | :x:                | Which environment should be used when requesting SSL cert from Lets Encrypt (staging, production)           |
+| Option                | Required           | Description                                                                                              |
+| --------------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
+| -i --ip               | :x:                | The private ip address of the upstream dns ec2 instance                                                  |
+| -h --host-name        | :heavy_check_mark: | The FQDN (or public) address that will be the host of this VPN Access Server that vpn clients connect to |
+| -d --domain-name      | :heavy_check_mark: | The FQDN to be used for certificate registration                                                         |
+| -e --email            | :heavy_check_mark: | The email to use for certificate registration                                                            |
+| -b --bucket           | :heavy_check_mark: | The S3 Bucket to store/obtain certificate artifacts                                                      |
+| -r --region           | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                              |
+| -u --user-name        | :heavy_check_mark: | The default vpn client username                                                                          |
+| -p --user-password    | :heavy_check_mark: | The default vpn client password (special characters need to be handled before they are passed here)      |
+| -c --cert-environment | :x:                | Which environment should be used when requesting SSL cert from Lets Encrypt (staging, production)        |
 ### `setup-pihole`
 
 Installs Pi Hole as a DNS server for Ad Blocking and sets up Unbound to serve as a recursive DNS service.
