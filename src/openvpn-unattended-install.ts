@@ -1,26 +1,27 @@
 import chalk from 'chalk';
 import AWS from 'aws-sdk';
 import fs from 'fs';
-import { SetupOpenVpnOptions } from 'types';
-import { PromiseResult } from 'aws-sdk/lib/request';
+import { IScriptable, SetupOpenVpnOptions } from 'types';
 import packageJson from '../package.json';
 import shelljs from 'shelljs';
+import { getCertificate } from './utils/acm-utils';
 
-export class SetupOpenVpn {
+export class SetupOpenVpn implements IScriptable {
     private readonly options: SetupOpenVpnOptions;
-    private readonly s3Client: AWS.S3;
+    private readonly acmClient: AWS.ACM;
 
     constructor(options: SetupOpenVpnOptions) {
         this.options = options;
-        this.s3Client = new AWS.S3({
-            region: options.region
-        });
-        console.log('options', options);
 
-        this.runSetup();
+        this.acmClient = new AWS.ACM({
+            region: this.options.region,
+            apiVersion: '2015-12-08'
+        });
+
+        this.run();
     }
 
-    public runSetup(): void {
+    public run(): void {
         try {
             console.log(
                 chalk.bgGreenBright(
@@ -110,13 +111,16 @@ export class SetupOpenVpn {
             )
         );
 
-        const { domainName, email, bucket } = this.options;
+        const { domainName, email } = this.options;
 
         this.installCertbot();
 
-        const hasExistingCert = await this.hasExistingCert();
+        const certificateSummary = await getCertificate(
+            this.acmClient,
+            this.options.domainName
+        );
 
-        if (!hasExistingCert) {
+        if (typeof certificateSummary === 'undefined') {
             console.log(
                 chalk.yellowBright(
                     `No existing certificate to reuse, creating new cert`
@@ -155,84 +159,13 @@ export class SetupOpenVpn {
                 throw e;
             }
 
-            // Change letsencrypt directory permissions
+            // Change letsencrypt directory permissions so that its contents can be read later on
             try {
                 shelljs.exec(`sudo chmod -R 755 /etc/letsencrypt`);
             } catch (e) {
                 console.log(
                     chalk.bgRedBright(
                         'An error while chaging directory permissions'
-                    ),
-                    e
-                );
-                throw e;
-            }
-
-            // Read generated certs and put them into s3
-            try {
-                const certPem = fs.readFileSync(
-                    `/etc/letsencrypt/live/${domainName}/cert.pem`,
-                    {
-                        encoding: 'utf8'
-                    }
-                );
-
-                const privKeyPem = fs.readFileSync(
-                    `/etc/letsencrypt/live/${domainName}/privkey.pem`,
-                    {
-                        encoding: 'utf8'
-                    }
-                );
-
-                const chainPem = fs.readFileSync(
-                    `/etc/letsencrypt/live/${domainName}/chain.pem`,
-                    {
-                        encoding: 'utf8'
-                    }
-                );
-
-                const fullChainPem = fs.readFileSync(
-                    `/etc/letsencrypt/live/${domainName}/fullchain.pem`,
-                    {
-                        encoding: 'utf8'
-                    }
-                );
-
-                await this.s3Client
-                    .putObject({
-                        Bucket: bucket,
-                        Key: `letsencrypt/${domainName}/cert.pem`,
-                        Body: certPem
-                    })
-                    .promise();
-
-                await this.s3Client
-                    .putObject({
-                        Bucket: bucket,
-                        Key: `letsencrypt/${domainName}/privkey.pem`,
-                        Body: privKeyPem
-                    })
-                    .promise();
-
-                await this.s3Client
-                    .putObject({
-                        Bucket: bucket,
-                        Key: `letsencrypt/${domainName}/chain.pem`,
-                        Body: chainPem
-                    })
-                    .promise();
-
-                await this.s3Client
-                    .putObject({
-                        Bucket: bucket,
-                        Key: `letsencrypt/${domainName}/fullchain.pem`,
-                        Body: fullChainPem
-                    })
-                    .promise();
-            } catch (e) {
-                console.log(
-                    chalk.bgRedBright(
-                        `An error occured when copying certs to S3 bucket ${bucket}`
                     ),
                     e
                 );
@@ -267,43 +200,45 @@ export class SetupOpenVpn {
                 throw e;
             }
 
-            // Get objects from s3 and write to relevant directory
+            // Get cert elements from ACM and write to relevant directory
             try {
-                this.writeToFile(
-                    await this.getS3Object(
-                        bucket,
-                        `letsencrypt/${domainName}/cert.pem`
-                    ),
-                    `/etc/letsencrypt/live/${domainName}/cert.pem`
-                );
+                const certificateResponse = await this.acmClient
+                    .exportCertificate()
+                    .promise();
 
-                this.writeToFile(
-                    await this.getS3Object(
-                        bucket,
-                        `letsencrypt/${domainName}/privkey.pem`
-                    ),
-                    `/etc/letsencrypt/live/${domainName}/privkey.pem`
-                );
+                if (
+                    typeof certificateResponse.Certificate !== 'undefined' &&
+                    typeof certificateResponse.CertificateChain !==
+                        'undefined' &&
+                    typeof certificateResponse.PrivateKey !== 'undefined'
+                ) {
+                    this.writeToFile(
+                        certificateResponse.Certificate,
+                        `/etc/letsencrypt/live/${domainName}/cert.pem`
+                    );
 
-                this.writeToFile(
-                    await this.getS3Object(
-                        bucket,
-                        `letsencrypt/${domainName}/chain.pem`
-                    ),
-                    `/etc/letsencrypt/live/${domainName}/chain.pem`
-                );
+                    this.writeToFile(
+                        certificateResponse.PrivateKey,
+                        `/etc/letsencrypt/live/${domainName}/privkey.pem`
+                    );
 
-                this.writeToFile(
-                    await this.getS3Object(
-                        bucket,
-                        `letsencrypt/${domainName}/fullchain.pem`
-                    ),
-                    `/etc/letsencrypt/live/${domainName}/fullchain.pem`
-                );
+                    this.writeToFile(
+                        certificateResponse.CertificateChain,
+                        `/etc/letsencrypt/live/${domainName}/chain.pem`
+                    );
+                }
+
+                // this.writeToFile(
+                //     await this.getS3Object(
+                //         bucket,
+                //         `letsencrypt/${domainName}/fullchain.pem`
+                //     ),
+                //     `/etc/letsencrypt/live/${domainName}/fullchain.pem`
+                // );
             } catch (e) {
                 console.log(
                     chalk.bgRedBright(
-                        `An error occured while getting certificate artifacts from ${bucket}`
+                        `An error occured while getting certificate artifacts from ACM`
                     ),
                     e
                 );
@@ -311,30 +246,8 @@ export class SetupOpenVpn {
             }
         }
 
-        this.applyCert();
+        this.installCertificate();
         this.startOpenVpn();
-    }
-
-    private async getS3Object(Bucket: string, Key: string): Promise<string> {
-        try {
-            const response = await this.s3Client
-                .getObject({
-                    Bucket,
-                    Key
-                })
-                .promise();
-
-            if (typeof response.Body === 'undefined') {
-                throw new Error(`Body of ${Key} is undefined`);
-            }
-
-            return response.Body?.toString('utf-8');
-        } catch (e) {
-            console.log(
-                chalk.bgRedBright(`Failed to get ${Key} from ${Bucket}`)
-            );
-            throw e;
-        }
     }
 
     private async writeToFile(content: string, path: string) {
@@ -343,55 +256,6 @@ export class SetupOpenVpn {
         } catch (e) {
             console.log(chalk.bgRedBright(`Failed to write ${path}`));
             throw e;
-        }
-    }
-
-    /**
-     * Check for existing certificate artifacts in the bucket
-     */
-    private async hasExistingCert(): Promise<boolean> {
-        try {
-            console.log(
-                chalk.blueBright(`Checking for existing SSL certificate`)
-            );
-
-            const results: Array<
-                PromiseResult<AWS.S3.HeadObjectOutput, AWS.AWSError>
-            > = await Promise.all([
-                await this.s3Client
-                    .headObject({
-                        Bucket: this.options.bucket,
-                        Key: `letsencrypt/${this.options.domainName}/cert.pem`
-                    })
-                    .promise(),
-                await this.s3Client
-                    .headObject({
-                        Bucket: this.options.bucket,
-                        Key: `letsencrypt/${this.options.domainName}/privkey.pem`
-                    })
-                    .promise(),
-                await this.s3Client
-                    .headObject({
-                        Bucket: this.options.bucket,
-                        Key: `letsencrypt/${this.options.domainName}/chain.pem`
-                    })
-                    .promise(),
-                await this.s3Client
-                    .headObject({
-                        Bucket: this.options.bucket,
-                        Key: `letsencrypt/${this.options.domainName}/fullchain.pem`
-                    })
-                    .promise()
-            ]);
-            return true;
-        } catch (e) {
-            console.log(
-                chalk.yellowBright(
-                    `Required certificate artifacts could not be found in ${this.options.bucket}`
-                ),
-                e
-            );
-            return false;
         }
     }
 
@@ -415,7 +279,7 @@ export class SetupOpenVpn {
         }
     }
 
-    private applyCert() {
+    private installCertificate() {
         try {
             console.log(
                 chalk.bgGreenBright(

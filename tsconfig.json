@@ -16,6 +16,6 @@
         "resolveJsonModule": true,
         "newLine": "lf"
     },
-    "exclude": ["node_modules"],
+    "exclude": ["node_modules", "dist/**/*", "cdk.out/**/*", "scripts/**/*"],
     "include": ["src/**/*.ts", "types/**/*.ts", "types/*.d.ts"]
 }

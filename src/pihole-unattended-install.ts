@@ -1,9 +1,9 @@
 import chalk from 'chalk';
-import { SetupPiHoleOptions } from 'types';
+import { IScriptable, SetupPiHoleOptions } from 'types';
 import packageJson from '../package.json';
 import fs from 'fs';
 import shelljs from 'shelljs';
-export class SetupPiHole {
+export class SetupPiHole implements IScriptable {
     private readonly options: SetupPiHoleOptions;
 
     private _instanceId?: string;
@@ -12,12 +12,10 @@ export class SetupPiHole {
 
     constructor(options: SetupPiHoleOptions) {
         this.options = options;
-        // TODO: Remove after installation
-        console.log('options', options);
-        this.runSetup();
+        this.run();
     }
 
-    public async runSetup(): Promise<void> {
+    public run(): void {
         try {
             console.log(
                 chalk.bgGreenBright(
