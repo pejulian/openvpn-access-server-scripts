@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import { IScriptable, SetupPiHoleOptions } from 'types';
 import packageJson from '../package.json';
-import fs from 'fs';
 import shelljs from 'shelljs';
+import { writeToFile } from './utils/fs-utils';
 export class SetupPiHole implements IScriptable {
     private readonly options: SetupPiHoleOptions;
 
@@ -119,8 +119,7 @@ export class SetupPiHole implements IScriptable {
             throw e;
         }
 
-        try {
-            const setupVars = `WEBPASSWORD=
+        const setupVars = `WEBPASSWORD=
 PIHOLE_INTERFACE=eth0
 IPV4_ADDRESS=${this.localIpv4}/24
 IPV6_ADDRESS=
@@ -143,18 +142,7 @@ API_QUERY_LOG_SHOW=all
 API_PRIVACY_MODE=false
 `;
 
-            fs.writeFileSync('/etc/pihole/setupVars.conf', setupVars, {
-                encoding: 'utf8'
-            });
-        } catch (e) {
-            console.log(
-                chalk.bgRedBright(
-                    `Failed to create /etc/pihole/setupVars.conf`
-                ),
-                e
-            );
-            throw e;
-        }
+        writeToFile(setupVars, '/etc/pihole/setupVars.conf');
     }
 
     private modifyHosts(): void {
@@ -276,14 +264,13 @@ API_PRIVACY_MODE=false
             throw e;
         }
 
-        try {
-            console.log(
-                chalk.bgGreenBright(
-                    `Creating unbound configuration with default values`
-                )
-            );
+        console.log(
+            chalk.bgGreenBright(
+                `Creating unbound configuration with default values`
+            )
+        );
 
-            const unboundConfig = `server:
+        const unboundConfig = `server:
 # If no logfile is specified, syslog is used
 # logfile: "/var/log/unbound/unbound.log"
 verbosity: 0
@@ -338,22 +325,7 @@ private-address: fd00::/8
 private-address: fe80::/10
 `;
 
-            fs.writeFileSync(
-                '/etc/unbound/unbound.conf.d/pi-hole.conf',
-                unboundConfig,
-                {
-                    encoding: 'utf8'
-                }
-            );
-        } catch (e) {
-            console.log(
-                chalk.bgRedBright(
-                    `Failed to update create unbound configuration file`
-                ),
-                e
-            );
-            throw e;
-        }
+        writeToFile(unboundConfig, '/etc/unbound/unbound.conf.d/pi-hole.conf');
 
         try {
             shelljs.exec(`sleep 30s`);

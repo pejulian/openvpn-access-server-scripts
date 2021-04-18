@@ -1,21 +1,20 @@
 import chalk from 'chalk';
 import AWS from 'aws-sdk';
-import fs from 'fs';
 import { IScriptable, SetupOpenVpnOptions } from 'types';
 import packageJson from '../package.json';
 import shelljs from 'shelljs';
-import { getCertificate } from './utils/acm-utils';
+import { getObject, objectExists } from './utils/s3-utils';
+import { writeToFile } from './utils/fs-utils';
 
 export class SetupOpenVpn implements IScriptable {
     private readonly options: SetupOpenVpnOptions;
-    private readonly acmClient: AWS.ACM;
+    private readonly s3Client: AWS.S3;
 
     constructor(options: SetupOpenVpnOptions) {
         this.options = options;
 
-        this.acmClient = new AWS.ACM({
-            region: this.options.region,
-            apiVersion: '2015-12-08'
+        this.s3Client = new AWS.S3({
+            region: this.options.region
         });
 
         this.run();
@@ -115,12 +114,9 @@ export class SetupOpenVpn implements IScriptable {
 
         this.installCertbot();
 
-        const certificateSummary = await getCertificate(
-            this.acmClient,
-            this.options.domainName
-        );
+        const existingCertificate = this.getCertificate();
 
-        if (typeof certificateSummary === 'undefined') {
+        if (typeof existingCertificate === 'undefined') {
             console.log(
                 chalk.yellowBright(
                     `No existing certificate to reuse, creating new cert`
@@ -200,45 +196,41 @@ export class SetupOpenVpn implements IScriptable {
                 throw e;
             }
 
-            // Get cert elements from ACM and write to relevant directory
+            // Use certificate elements from s3 and write to relevant directory
             try {
-                const certificateResponse = await this.acmClient
-                    .exportCertificate()
-                    .promise();
+                const certificateResponse = await this.getCertificate();
 
-                if (
-                    typeof certificateResponse.Certificate !== 'undefined' &&
-                    typeof certificateResponse.CertificateChain !==
-                        'undefined' &&
-                    typeof certificateResponse.PrivateKey !== 'undefined'
-                ) {
-                    this.writeToFile(
-                        certificateResponse.Certificate,
+                if (typeof certificateResponse !== 'undefined') {
+                    writeToFile(
+                        certificateResponse.certPem,
                         `/etc/letsencrypt/live/${domainName}/cert.pem`
                     );
 
-                    this.writeToFile(
-                        certificateResponse.PrivateKey,
-                        `/etc/letsencrypt/live/${domainName}/privkey.pem`
+                    writeToFile(
+                        certificateResponse.privkeyPem,
+                        `/etc/letsencrypt/live/${domainName}/privkey.pem.enc`
                     );
 
-                    this.writeToFile(
-                        certificateResponse.CertificateChain,
+                    writeToFile(
+                        certificateResponse.chainPem,
                         `/etc/letsencrypt/live/${domainName}/chain.pem`
                     );
-                }
 
-                // this.writeToFile(
-                //     await this.getS3Object(
-                //         bucket,
-                //         `letsencrypt/${domainName}/fullchain.pem`
-                //     ),
-                //     `/etc/letsencrypt/live/${domainName}/fullchain.pem`
-                // );
+                    writeToFile(
+                        certificateResponse.fullchainPem,
+                        `/etc/letsencrypt/live/${domainName}/fullchain.pem`
+                    );
+                } else {
+                    console.log(
+                        chalk.bgYellowBright(
+                            `Although initial certificate check showed an existing certificate to use, the actual content of the certificate was not found/usable`
+                        )
+                    );
+                }
             } catch (e) {
                 console.log(
                     chalk.bgRedBright(
-                        `An error occured while getting certificate artifacts from ACM`
+                        `An error occured while getting certificate artifacts from S3`
                     ),
                     e
                 );
@@ -248,15 +240,6 @@ export class SetupOpenVpn implements IScriptable {
 
         this.installCertificate();
         this.startOpenVpn();
-    }
-
-    private async writeToFile(content: string, path: string) {
-        try {
-            fs.writeFileSync(path, content);
-        } catch (e) {
-            console.log(chalk.bgRedBright(`Failed to write ${path}`));
-            throw e;
-        }
     }
 
     /**
@@ -303,7 +286,7 @@ export class SetupOpenVpn implements IScriptable {
                 ),
                 e
             );
-            throw e;
+            return;
         }
 
         try {
@@ -327,7 +310,7 @@ export class SetupOpenVpn implements IScriptable {
                 ),
                 e
             );
-            throw e;
+            return;
         }
     }
 
@@ -354,6 +337,104 @@ export class SetupOpenVpn implements IScriptable {
                 e
             );
             return;
+        }
+    }
+
+    /**
+     * Obtains an existing certificate as an object containing all certificate elements as strings or undefined if the certificate does not exist
+     */
+    private async getCertificate(): Promise<
+        | undefined
+        | {
+              readonly certPem: string;
+              readonly privkeyPem: string;
+              readonly chainPem: string;
+              readonly fullchainPem: string;
+          }
+    > {
+        try {
+            const checks = await Promise.all([
+                objectExists(
+                    this.s3Client,
+                    this.options.bucketName,
+                    `letsencrypt/${this.options.domainName}/cert.pem`
+                ),
+                objectExists(
+                    this.s3Client,
+                    this.options.bucketName,
+                    `letsencrypt/${this.options.domainName}/privkey.pem`
+                ),
+                objectExists(
+                    this.s3Client,
+                    this.options.bucketName,
+                    `letsencrypt/${this.options.domainName}/chain.pem`
+                ),
+                objectExists(
+                    this.s3Client,
+                    this.options.bucketName,
+                    `letsencrypt/${this.options.domainName}/fullchain.pem`
+                )
+            ]);
+
+            const certificateExists = checks.every((value) => value === true);
+
+            if (certificateExists) {
+                const getResults = await Promise.all([
+                    getObject(
+                        this.s3Client,
+                        this.options.bucketName,
+                        `letsencrypt/${this.options.domainName}/cert.pem`
+                    ),
+                    getObject(
+                        this.s3Client,
+                        this.options.bucketName,
+                        `letsencrypt/${this.options.domainName}/privkey.pem`
+                    ),
+                    getObject(
+                        this.s3Client,
+                        this.options.bucketName,
+                        `letsencrypt/${this.options.domainName}/chain.pem`
+                    ),
+                    getObject(
+                        this.s3Client,
+                        this.options.bucketName,
+                        `letsencrypt/${this.options.domainName}/fullchain.pem`
+                    )
+                ]);
+
+                const hasContent = getResults.every(
+                    (value) => typeof value !== 'undefined'
+                );
+
+                if (hasContent) {
+                    return {
+                        certPem: getResults[0],
+                        privkeyPem: getResults[1],
+                        chainPem: getResults[2],
+                        fullchainPem: getResults[3]
+                    };
+                } else {
+                    console.log(
+                        chalk.bgYellowBright(
+                            `Some or all the required certificate elements did not have any content when fetched from the s3 bucket ${this.options.bucketName}`
+                        )
+                    );
+                    return undefined;
+                }
+            } else {
+                console.log(
+                    chalk.bgYellowBright(
+                        `Some or all the required certificate elements could not be found in the s3 bucket ${this.options.bucketName}`
+                    )
+                );
+                return undefined;
+            }
+        } catch (e) {
+            console.log(
+                chalk.bgRedBright(`Failed to obtain existing certifate`),
+                e
+            );
+            return undefined;
         }
     }
 }

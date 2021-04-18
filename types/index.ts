@@ -19,6 +19,10 @@ export type SetupOpenVpnOptions = BaseOptions & {
      */
     readonly domainName: string;
     /**
+     * The bucket name to look for backed up SSL certs
+     */
+    readonly bucketName: string;
+    /**
      * The email to be used for Let's Encrypy certificate registration
      */
     readonly email: string;
@@ -55,17 +59,21 @@ export type BackupSslCertOptions = BaseOptions & {
      */
     readonly domainName: string;
     /**
+     * The bucket name where SSL certficates will be backed up to
+     */
+    readonly bucketName: string;
+    /**
      * The name of the auto scaling group where lifecycle operations are being triggered
      */
-    readonly autoScalingGroupName: string,
+    readonly autoScalingGroupName: string;
     /**
      * The lifecycle hook name
      */
-    readonly lifecycleHookName: string,
+    readonly lifecycleHookName: string;
     /**
      * The lifecycle token (needed for completing the hook)
      */
-    readonly lifecycleActionToken: string,
+    readonly lifecycleActionToken: string;
 };
 
 export interface IScriptable {

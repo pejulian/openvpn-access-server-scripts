@@ -42,6 +42,10 @@ program
         `The AWS region to use when using the SDK to communicate with AWS`
     )
     .requiredOption(
+        `-b --bucket-name [value]`,
+        `The s3 bucket to look for stored ssl certs`
+    )
+    .requiredOption(
         `-u, --user-name [value]`,
         `The username of the client user`
     )
@@ -82,6 +86,10 @@ program
     .requiredOption(
         `-r --region [value]`,
         `The AWS region to use when using the SDK to communicate with AWS`
+    )
+    .requiredOption(
+        `-b --bucket-name [value]`,
+        `The bucket name where SSL certficates will be backed up to`
     )
     .requiredOption(
         `-a --auto-scaling-group-name [value]`,
