@@ -120,7 +120,7 @@ export class SetupPiHole implements IScriptable {
         }
 
         const setupVars = `WEBPASSWORD=
-PIHOLE_INTERFACE=eth0
+PIHOLE_INTERFACE=ens5
 IPV4_ADDRESS=${this.localIpv4}/24
 IPV6_ADDRESS=
 QUERY_LOGGING=true

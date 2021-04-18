@@ -34,14 +34,14 @@ After requesting a new certificate, this function will store the generated certi
 | Option                | Required           | Description                                                                                              |
 | --------------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
 | -i --ip               | :x:                | The private ip address of the upstream dns ec2 instance                                                  |
+| -c --cert-environment | :x:                | Which environment should be used when requesting SSL cert from Lets Encrypt (staging, production)        |
 | -h --host-name        | :heavy_check_mark: | The FQDN (or public) address that will be the host of this VPN Access Server that vpn clients connect to |
 | -d --domain-name      | :heavy_check_mark: | The FQDN to be used for certificate registration                                                         |
 | -e --email            | :heavy_check_mark: | The email to use for certificate registration                                                            |
-| -b --bucket           | :heavy_check_mark: | The S3 Bucket to store/obtain certificate artifacts                                                      |
 | -r --region           | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                              |
+| -b --bucket-name      | :heavy_check_mark: | The S3 Bucket to store/obtain certificate artifacts                                                      |
 | -u --user-name        | :heavy_check_mark: | The default vpn client username                                                                          |
 | -p --user-password    | :heavy_check_mark: | The default vpn client password (special characters need to be handled before they are passed here)      |
-| -c --cert-environment | :x:                | Which environment should be used when requesting SSL cert from Lets Encrypt (staging, production)        |
 ### `setup-pihole`
 
 Installs Pi Hole as a DNS server for Ad Blocking and sets up Unbound to serve as a recursive DNS service.
@@ -51,6 +51,22 @@ Also installs some additional tooling to enhance Pi Hole functionality.
  | ------------- | ------------------ | ------------------------------------------------------------------------------------------------------ |
  | -r --region   | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                            |
  | -p --password | :heavy_check_mark: | The pi hole web interface password (special characters need to be handled before they are passed here) |
+
+
+### `backup-ssl-cert`
+
+Takes a backup of existing SSL certs in the relevant Lets Encrypt directory when the host ec2 instance is being terminated so that it can be reused when a new Open VPN instance is created by the Auto Scaling Group.
+
+
+ | Option                       | Required           | Description                                                                                                    |
+ | ---------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------- |
+ | -d --domain-name             | :heavy_check_mark: | The FQDN to be used for certificate registration                                                               |
+ | -r --region                  | :heavy_check_mark: | The AWS region for the S3 SDK client to use                                                                    |
+ | -b --bucket-name             | :heavy_check_mark: | The S3 Bucket to store/obtain certificate artifacts                                                            |
+ | -a --auto-scaling-group-name | :heavy_check_mark: | The name of the auto scaling group that triggers lifecycle events impacting the ec2 instance with the ssl cert |
+ | -l --lifecycle-hook-name     | :heavy_check_mark: | The name of the lifecycle hook that triggers this script                                                       |
+ | -t --lifecycle-action-token  | :heavy_check_mark: | The lifecycle action token (a unique id generated for lifecyle events)                                         |
+
 
 ## Publishing
 
