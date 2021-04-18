@@ -26,7 +26,8 @@ export class BackupSslCert implements IScriptable {
             region: this.options.region
         });
 
-        this.instanceId = shelljs.exec(`ec2metadata --instance-id`).toString();
+        const { stdout } = shelljs.exec(`ec2metadata --instance-id`);
+        this.instanceId = stdout.trim().replace('\n', '');
 
         this.run();
     }
@@ -139,8 +140,7 @@ export class BackupSslCert implements IScriptable {
             console.log(
                 chalk.greenBright(
                     `Successfully uploaded certificate to ${this.options.bucketName}`
-                ),
-                result
+                )
             );
         } catch (e) {
             console.log(

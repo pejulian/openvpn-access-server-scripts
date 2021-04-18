@@ -3,7 +3,7 @@ import AWS from 'aws-sdk';
 import { IScriptable, SetupOpenVpnOptions } from 'types';
 import packageJson from '../package.json';
 import shelljs from 'shelljs';
-import { getObject, objectExists } from './utils/s3-utils';
+import { getObject, objectExists, putObject } from './utils/s3-utils';
 import { writeToFile } from './utils/fs-utils';
 
 export class SetupOpenVpn implements IScriptable {
@@ -114,7 +114,7 @@ export class SetupOpenVpn implements IScriptable {
 
         this.installCertbot();
 
-        const existingCertificate = this.getCertificate();
+        const existingCertificate = await this.getCertificate();
 
         if (typeof existingCertificate === 'undefined') {
             console.log(
@@ -198,35 +198,25 @@ export class SetupOpenVpn implements IScriptable {
 
             // Use certificate elements from s3 and write to relevant directory
             try {
-                const certificateResponse = await this.getCertificate();
+                writeToFile(
+                    existingCertificate.certPem,
+                    `/etc/letsencrypt/live/${domainName}/cert.pem`
+                );
 
-                if (typeof certificateResponse !== 'undefined') {
-                    writeToFile(
-                        certificateResponse.certPem,
-                        `/etc/letsencrypt/live/${domainName}/cert.pem`
-                    );
+                writeToFile(
+                    existingCertificate.privkeyPem,
+                    `/etc/letsencrypt/live/${domainName}/privkey.pem`
+                );
 
-                    writeToFile(
-                        certificateResponse.privkeyPem,
-                        `/etc/letsencrypt/live/${domainName}/privkey.pem.enc`
-                    );
+                writeToFile(
+                    existingCertificate.chainPem,
+                    `/etc/letsencrypt/live/${domainName}/chain.pem`
+                );
 
-                    writeToFile(
-                        certificateResponse.chainPem,
-                        `/etc/letsencrypt/live/${domainName}/chain.pem`
-                    );
-
-                    writeToFile(
-                        certificateResponse.fullchainPem,
-                        `/etc/letsencrypt/live/${domainName}/fullchain.pem`
-                    );
-                } else {
-                    console.log(
-                        chalk.bgYellowBright(
-                            `Although initial certificate check showed an existing certificate to use, the actual content of the certificate was not found/usable`
-                        )
-                    );
-                }
+                writeToFile(
+                    existingCertificate.fullchainPem,
+                    `/etc/letsencrypt/live/${domainName}/fullchain.pem`
+                );
             } catch (e) {
                 console.log(
                     chalk.bgRedBright(
